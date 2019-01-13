@@ -44,9 +44,18 @@ func isStart(link string, root string) bool {
 	return false
 }
 
+func isValidExtension(link string) bool {
+	for _, extension := range Extensions {
+		if strings.Contains(strings.ToLower(link), extension) {
+			return false
+		}
+	}
+	return true
+}
+
 func isValidLink(link string, root string) bool {
 
-	if isInternLink(link, root) && !isStart(link, root) {
+	if isInternLink(link, root) && !isStart(link, root) && isValidExtension(link) {
 		return true
 	}
 
@@ -64,7 +73,18 @@ func doesLinkExist(newLink Links, existingLinks []Links) (exists bool) {
 	return
 }
 
-func getLinks(domain string) (links []Links, err error) {
+func isLinkScanned(link string, scanned []string) (exists bool) {
+
+	for _, val := range scanned {
+		if strings.Compare(link, val) == 0 {
+			exists = true
+		}
+	}
+
+	return
+}
+
+func getLinks(domain string, root string) (links []Links, err error) {
 
 	resp, err := http.Get(domain)
 	if err != nil {
@@ -77,8 +97,6 @@ func getLinks(domain string) (links []Links, err error) {
 		fmt.Println(err)
 		return
 	}
-
-	root := resp.Request.URL.String()
 
 	var f func(*html.Node)
 	f = func(n *html.Node) {

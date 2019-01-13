@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 )
 
@@ -16,25 +17,54 @@ func main() {
 		os.Exit(1)
 	}
 
-	links, err := getLinks(*domain)
+	// Do First call to domain
+	resp, err := http.Get(*domain)
+	if err != nil {
+		fmt.Println("Domain could not be reached!")
+		return
+	}
+	// Todo: get favourite version of URL here
+	defer resp.Body.Close()
+
+	root := resp.Request.URL.String()
+
+	scanned := []string{}
+
+	// Extract Links from Startsite
+	links, err := getLinks(*domain, root)
 	if err != nil {
 		fmt.Println("Could not get any links from Startsite")
 	}
 
-	for _, link := range links {
-		newLinks, err := getLinks(link.Href)
-		if err != nil {
-			break
-		}
+	for i := 0; i < 10; i++ {
 
-		for _, new := range newLinks {
-			if !doesLinkExist(new, links) {
-				links = append(links, new)
+		fmt.Printf("Round %d Links found: %d\n", i, len(links))
+
+		for _, link := range links {
+
+			if isLinkScanned(link.Href, scanned) || link.NoFollow {
+				continue
+			}
+
+			newLinks, err := getLinks(link.Href, root)
+			if err != nil {
+				break
+			}
+
+			scanned = append(scanned, link.Href)
+
+			for _, new := range newLinks {
+				if !doesLinkExist(new, links) {
+					links = append(links, new)
+				}
 			}
 		}
+
 	}
 
+	fmt.Printf("Total Links found: %d\n", len(links))
+
 	for _, val := range links {
-		fmt.Println(val)
+		fmt.Println("->", val.Href)
 	}
 }
