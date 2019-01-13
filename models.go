@@ -2,6 +2,14 @@ package main
 
 import "encoding/xml"
 
+type Page struct {
+	Url       string
+	Canonical string
+	Links     []Links
+	NoFollow  bool
+	NoIndex   bool
+}
+
 type Links struct {
 	Href     string
 	NoFollow bool

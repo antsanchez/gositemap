@@ -86,7 +86,7 @@ func isLinkScanned(link string, scanned []string) (exists bool) {
 	return
 }
 
-func getLinks(domain string, root string) (links []Links, err error) {
+func getLinks(domain string, root string) (page Page, err error) {
 
 	resp, err := http.Get(domain)
 	if err != nil {
@@ -100,8 +100,28 @@ func getLinks(domain string, root string) (links []Links, err error) {
 		return
 	}
 
+	page.Url = domain
+	foundMeta := false
+
 	var f func(*html.Node)
 	f = func(n *html.Node) {
+
+		if n.Type == html.ElementNode && n.Data == "meta" {
+			for _, a := range n.Attr {
+				if a.Key == "name" && a.Val == "robots" {
+					foundMeta = true
+				}
+				if foundMeta {
+					if a.Key == "content" && strings.Contains(a.Val, "noindex") {
+						page.NoIndex = true
+					}
+					if a.Key == "content" && strings.Contains(a.Val, "nofollow") {
+						page.NoFollow = true
+					}
+				}
+			}
+		}
+
 		if n.Type == html.ElementNode && n.Data == "a" {
 
 			ok := false
@@ -128,13 +148,15 @@ func getLinks(domain string, root string) (links []Links, err error) {
 
 			}
 
-			if ok && !doesLinkExist(newLink, links) {
-				links = append(links, newLink)
+			if ok && !doesLinkExist(newLink, page.Links) {
+				page.Links = append(page.Links, newLink)
 			}
 		}
+
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			f(c)
 		}
+
 	}
 	f(doc)
 
@@ -169,6 +191,7 @@ func appendBytes(appendTo []byte, toAppend []byte) []byte {
 
 	return appendTo
 }
+
 func check(e error) {
 	if e != nil {
 		panic(e)
