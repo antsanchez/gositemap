@@ -10,6 +10,7 @@ import (
 func main() {
 
 	var domain = flag.String("u", "", "URL to extract")
+	var filename = flag.String("s", "sitemap.xml", "Filename for the sitemap")
 	flag.Parse()
 
 	if *domain == "" {
@@ -64,7 +65,5 @@ func main() {
 
 	fmt.Printf("Total Links found: %d\n", len(links))
 
-	for _, val := range links {
-		fmt.Println("->", val.Href)
-	}
+	createSitemap(links, *filename)
 }

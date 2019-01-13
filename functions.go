@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -137,4 +139,38 @@ func getLinks(domain string, root string) (links []Links, err error) {
 	f(doc)
 
 	return
+}
+
+func createSitemap(links []Links, filename string) {
+
+	var total = []byte(xml.Header)
+	total = appendBytes(total, []byte(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`))
+
+	for _, val := range links {
+		pos := UrlSitemap{Loc: val.Href}
+		output, err := xml.Marshal(pos)
+		check(err)
+
+		for _, b := range output {
+			total = append(total, b)
+		}
+	}
+
+	total = appendBytes(total, []byte(`</urlset>`))
+
+	err := ioutil.WriteFile(filename, total, 0644)
+	check(err)
+}
+
+func appendBytes(appendTo []byte, toAppend []byte) []byte {
+	for _, val := range toAppend {
+		appendTo = append(appendTo, val)
+	}
+
+	return appendTo
+}
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
