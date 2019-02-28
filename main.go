@@ -6,9 +6,12 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
+
+	start := time.Now()
 
 	var domain = flag.String("u", "", "URL to extract")
 	var filename = flag.String("o", "sitemap.xml", "Output filename")
@@ -30,6 +33,7 @@ func main() {
 	// Todo: get favourite version of URL here
 	defer resp.Body.Close()
 
+	// Detected root domain
 	root := resp.Request.URL.String()
 
 	links := []Links{}
@@ -93,5 +97,9 @@ func main() {
 		}
 	}
 
+	fmt.Printf("Time finished crawling %s\n", time.Since(start))
+
 	createSitemap(links, *filename)
+
+	fmt.Printf("Time finished sitemap %s\n", time.Since(start))
 }

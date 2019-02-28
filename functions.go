@@ -163,6 +163,10 @@ func getLinks(domain string, root string) (page Page, err error) {
 	return
 }
 
+func takeLinks(domain string, root string, savedLinks chan string) {
+
+}
+
 func createSitemap(links []Links, filename string) {
 
 	var total = []byte(xml.Header)
