@@ -163,23 +163,41 @@ func getLinks(domain string, root string) (page Page, err error) {
 	return
 }
 
-func takeLinks(domain string, root string, savedLinks chan string) {
+func takeLinks(toScan string, root string, started chan int, finished chan int, scanning chan int, newLinks chan []Links, pages chan Page) {
 
+	started <- 1
+	scanning <- 1
+	defer func() {
+		<-scanning
+		finished <- 1
+		fmt.Printf("Scanned %s. Started: %d - Finished %d\n", toScan, len(started), len(finished))
+	}()
+
+	// Get links
+	page, err := getLinks(toScan, root)
+	if err != nil {
+		return
+	}
+
+	// Save Page
+	pages <- page
+
+	// Save links
+	newLinks <- page.Links
 }
 
 func createSitemap(links []Links, filename string) {
 
 	var total = []byte(xml.Header)
 	total = appendBytes(total, []byte(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`))
+	total = appendBytes(total, []byte("\n"))
 
 	for _, val := range links {
 		pos := UrlSitemap{Loc: val.Href}
-		output, err := xml.Marshal(pos)
+		output, err := xml.MarshalIndent(pos, "  ", "    ")
 		check(err)
-
-		for _, b := range output {
-			total = append(total, b)
-		}
+		total = appendBytes(total, output)
+		total = appendBytes(total, []byte("\n"))
 	}
 
 	total = appendBytes(total, []byte(`</urlset>`))

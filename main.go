@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -13,10 +12,25 @@ func main() {
 
 	start := time.Now()
 
+	newLinks := make(chan []Links, 10000)
+	pages := make(chan Page, 10000)
+	scanning := make(chan int, 5)
+	started := make(chan int, 10000)
+	finished := make(chan int, 10000)
+
+	indexed := []Links{}
+	seen := make(map[string]bool)
+
+	defer func() {
+		close(newLinks)
+		close(pages)
+		close(started)
+		close(finished)
+		close(scanning)
+	}()
+
 	var domain = flag.String("u", "", "URL to extract")
 	var filename = flag.String("o", "sitemap.xml", "Output filename")
-	var depth = flag.Int("d", 10, "Depth levels of crawling")
-
 	flag.Parse()
 
 	if *domain == "" {
@@ -36,70 +50,37 @@ func main() {
 	// Detected root domain
 	root := resp.Request.URL.String()
 
-	links := []Links{}
-	scanned := []string{}
-	noIndex := []string{}
-	noFollow := []string{}
+	// Take the links from the startsite
+	takeLinks(*domain, root, started, finished, scanning, newLinks, pages)
+	seen[*domain] = true
 
-	// Extract Links from Startsite
-	page, err := getLinks(*domain, root)
-	if err != nil {
-		fmt.Println("Could not get any links from Startsite")
-	}
-
-	links = page.Links
-
-	for i := 0; i < *depth; i++ {
-
-		fmt.Printf("Round %d Links found: %d\n", i, len(links))
-
-		for _, link := range links {
-
-			if isLinkScanned(link.Href, scanned) || link.NoFollow {
-				continue
+	for {
+		select {
+		case links := <-newLinks:
+			for _, link := range links {
+				if !link.NoFollow {
+					if !seen[link.Href] {
+						seen[link.Href] = true
+						go takeLinks(link.Href, root, started, finished, scanning, newLinks, pages)
+					}
+				}
 			}
-
-			scanned = append(scanned, link.Href)
-
-			newLinks, err := getLinks(link.Href, root)
-			if err != nil {
-				break
-			}
-
-			if newLinks.NoFollow {
-				noFollow = append(noFollow, newLinks.Url)
-				continue
-			}
-
-			if newLinks.NoIndex {
-				noIndex = append(noIndex, newLinks.Url)
-			}
-
-			for _, new := range newLinks.Links {
-				if !doesLinkExist(new, links) {
-					links = append(links, new)
+		case page := <-pages:
+			if !page.NoIndex {
+				for _, link := range page.Links {
+					indexed = append(indexed, link)
 				}
 			}
 		}
-
-	}
-
-	fmt.Printf("Total Links found: %d\n", len(links))
-
-	// Remove noIndex
-	if len(noIndex) > 0 {
-		for _, no := range noIndex {
-			for i, sub := range links {
-				if strings.Compare(sub.Href, no) == 0 {
-					links = append(links[:i], links[i+1:]...)
-				}
-			}
+		if len(started) > 1 && len(scanning) == 0 && len(started) == len(finished) {
+			fmt.Printf("Breaking. Started: %d - Finished %d\n", len(started), len(finished))
+			break
 		}
 	}
 
 	fmt.Printf("Time finished crawling %s\n", time.Since(start))
 
-	createSitemap(links, *filename)
+	createSitemap(indexed, *filename)
 
 	fmt.Printf("Time finished sitemap %s\n", time.Since(start))
 }
