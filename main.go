@@ -10,36 +10,51 @@ import (
 
 func main() {
 
-	start := time.Now()
+	var filename = flag.String("o", "sitemap.xml", "Output filename")
+	var simultaneus = flag.Int("s", 3, "Number of concurrent connections")
+	flag.Parse()
 
-	newLinks := make(chan []Links, 10000)
-	pages := make(chan Page, 10000)
-	scanning := make(chan int, 5)
-	started := make(chan int, 10000)
-	finished := make(chan int, 10000)
+	var domain string
+	if len(os.Args) >= 1 {
+		domain = os.Args[1]
+	}
 
-	indexed := []Links{}
+	if domain == "" {
+		fmt.Println("URL can not be empty")
+		os.Exit(1)
+	}
+
+	if *simultaneus < 1 && *simultaneus > 50 {
+		fmt.Println("There can't be less than 1 simulataneos conexion and more than 50")
+		os.Exit(1)
+	}
+
+	scanning := make(chan int, *simultaneus) // Semaphore
+	newLinks := make(chan []Links, 10000)    // New links to scan
+	pages := make(chan Page, 10000)          // Pages scanned
+	started := make(chan int, 10000)         // Crawls started
+	finished := make(chan int, 10000)        // Crawls finished
+
+	var indexed, noIndex []string
+
 	seen := make(map[string]bool)
 
+	start := time.Now()
+
 	defer func() {
+
 		close(newLinks)
 		close(pages)
 		close(started)
 		close(finished)
 		close(scanning)
+
+		fmt.Printf("\nTime finished sitemap %s\n", time.Since(start))
+		fmt.Printf("Index: %6d - NoIndex %6d\n", len(indexed), len(noIndex))
 	}()
 
-	var domain = flag.String("u", "", "URL to extract")
-	var filename = flag.String("o", "sitemap.xml", "Output filename")
-	flag.Parse()
-
-	if *domain == "" {
-		fmt.Println("URL can not be empty")
-		os.Exit(1)
-	}
-
 	// Do First call to domain
-	resp, err := http.Get(*domain)
+	resp, err := http.Get(domain)
 	if err != nil {
 		fmt.Println("Domain could not be reached!")
 		return
@@ -51,12 +66,13 @@ func main() {
 	root := resp.Request.URL.String()
 
 	// Take the links from the startsite
-	takeLinks(*domain, root, started, finished, scanning, newLinks, pages)
-	seen[*domain] = true
+	takeLinks(domain, root, started, finished, scanning, newLinks, pages)
+	seen[domain] = true
 
 	for {
 		select {
 		case links := <-newLinks:
+
 			for _, link := range links {
 				if !link.NoFollow {
 					if !seen[link.Href] {
@@ -65,22 +81,28 @@ func main() {
 					}
 				}
 			}
+
 		case page := <-pages:
-			if !page.NoIndex {
-				for _, link := range page.Links {
-					indexed = append(indexed, link)
+
+			if page.NoIndex {
+
+				if !isUrlInSlice(page.Url, noIndex) {
+					noIndex = append(noIndex, page.Url)
+				}
+
+			} else {
+
+				if !isUrlInSlice(page.Url, indexed) {
+					indexed = append(indexed, page.Url)
 				}
 			}
 		}
+
+		// Break the for loop once all scans are finished
 		if len(started) > 1 && len(scanning) == 0 && len(started) == len(finished) {
-			fmt.Printf("Breaking. Started: %d - Finished %d\n", len(started), len(finished))
 			break
 		}
 	}
 
-	fmt.Printf("Time finished crawling %s\n", time.Since(start))
-
 	createSitemap(indexed, *filename)
-
-	fmt.Printf("Time finished sitemap %s\n", time.Since(start))
 }

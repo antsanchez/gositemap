@@ -75,6 +75,36 @@ func doesLinkExist(newLink Links, existingLinks []Links) (exists bool) {
 	return
 }
 
+func isInSlice(search string, array []string) bool {
+
+	for _, val := range array {
+		if val == search {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isUrlInSlice(search string, array []string) bool {
+
+	withSlash := search[:len(search)-1]
+	withoutSlash := search
+
+	if string(search[len(search)-1]) == "/" {
+		withSlash = search
+		withoutSlash = search[:len(search)-1]
+	}
+
+	for _, val := range array {
+		if val == withSlash || val == withoutSlash {
+			return true
+		}
+	}
+
+	return false
+}
+
 func isLinkScanned(link string, scanned []string) (exists bool) {
 
 	for _, val := range scanned {
@@ -170,7 +200,7 @@ func takeLinks(toScan string, root string, started chan int, finished chan int, 
 	defer func() {
 		<-scanning
 		finished <- 1
-		fmt.Printf("Scanned %s. Started: %d - Finished %d\n", toScan, len(started), len(finished))
+		fmt.Printf("\rStarted: %6d - Finished %6d", len(started), len(finished))
 	}()
 
 	// Get links
@@ -186,14 +216,14 @@ func takeLinks(toScan string, root string, started chan int, finished chan int, 
 	newLinks <- page.Links
 }
 
-func createSitemap(links []Links, filename string) {
+func createSitemap(links []string, filename string) {
 
 	var total = []byte(xml.Header)
 	total = appendBytes(total, []byte(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`))
 	total = appendBytes(total, []byte("\n"))
 
 	for _, val := range links {
-		pos := UrlSitemap{Loc: val.Href}
+		pos := UrlSitemap{Loc: val}
 		output, err := xml.MarshalIndent(pos, "  ", "    ")
 		check(err)
 		total = appendBytes(total, output)
