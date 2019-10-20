@@ -1,3 +1,16 @@
+// Copyright 2019 Antonio Sanchez (asanchez.dev). All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -29,10 +42,10 @@ func main() {
 	}
 
 	scanning := make(chan int, *simultaneus) // Semaphore
-	newLinks := make(chan []Links, 10000)    // New links to scan
-	pages := make(chan Page, 10000)          // Pages scanned
-	started := make(chan int, 10000)         // Crawls started
-	finished := make(chan int, 10000)        // Crawls finished
+	newLinks := make(chan []Links, 100000)   // New links to scan
+	pages := make(chan Page, 100000)         // Pages scanned
+	started := make(chan int, 100000)        // Crawls started
+	finished := make(chan int, 100000)       // Crawls finished
 
 	var indexed, noIndex []string
 
