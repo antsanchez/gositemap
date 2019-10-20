@@ -10,22 +10,21 @@ import (
 
 func main() {
 
+	var domain = flag.String("d", "", "Domain to analyse")
 	var filename = flag.String("o", "sitemap.xml", "Output filename")
 	var simultaneus = flag.Int("s", 3, "Number of concurrent connections")
 	flag.Parse()
 
-	var domain string
-	if len(os.Args) >= 1 {
-		domain = os.Args[1]
-	}
-
-	if domain == "" {
+	if *domain == "" {
 		fmt.Println("URL can not be empty")
 		os.Exit(1)
 	}
 
-	if *simultaneus < 1 && *simultaneus > 50 {
-		fmt.Println("There can't be less than 1 simulataneos conexion and more than 50")
+	fmt.Println("Domain:", *domain)
+	fmt.Println("Simultaneus:", *simultaneus)
+
+	if *simultaneus < 1 {
+		fmt.Println("There can't be less than 1 simulataneous conexions")
 		os.Exit(1)
 	}
 
@@ -54,7 +53,7 @@ func main() {
 	}()
 
 	// Do First call to domain
-	resp, err := http.Get(domain)
+	resp, err := http.Get(*domain)
 	if err != nil {
 		fmt.Println("Domain could not be reached!")
 		return
@@ -66,8 +65,8 @@ func main() {
 	root := resp.Request.URL.String()
 
 	// Take the links from the startsite
-	takeLinks(domain, root, started, finished, scanning, newLinks, pages)
-	seen[domain] = true
+	takeLinks(*domain, root, started, finished, scanning, newLinks, pages)
+	seen[*domain] = true
 
 	for {
 		select {
