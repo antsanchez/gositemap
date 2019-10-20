@@ -1,6 +1,6 @@
 # Gositemap
 
-Simple program made in go to create a sitemap of any website
+Simple program made in Go to create a sitemap of any website.
 
 ## Getting Started
 
@@ -14,9 +14,9 @@ Just download the repository and compile it with `go build`.
 
 The following flags are available:
 
--d Full Domain with HTTP Protocol
--o Filename to output the sitemap
--s Number of maximum concurrent connections
+- -d    Full Domain with HTTP Protocol
+- -o    Filename to output the sitemap
+- -s    Number of maximum concurrent connections
 
 Example:
 
