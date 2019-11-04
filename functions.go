@@ -24,11 +24,16 @@ func SanitizeUrl(link string) string {
 		link = link + "/"
 	}
 
-	tram := strings.Split(link, "#")
-	return tram[0]
+	tram := strings.Split(link, "#")[0]
+
+	if !*useQueries {
+		tram = removeQuery(tram)
+	}
+
+	return tram
 }
 
-func isInternLink(link string, root string) bool {
+func isInternLink(link string) bool {
 
 	if strings.Index(link, root) == 0 {
 		return true
@@ -37,7 +42,11 @@ func isInternLink(link string, root string) bool {
 	return false
 }
 
-func isStart(link string, root string) bool {
+func removeQuery(link string) string {
+	return strings.Split(link, "?")[0]
+}
+
+func isStart(link string) bool {
 
 	if strings.Compare(link, root) == 0 {
 		return true
@@ -55,9 +64,9 @@ func isValidExtension(link string) bool {
 	return true
 }
 
-func isValidLink(link string, root string) bool {
+func isValidLink(link string) bool {
 
-	if isInternLink(link, root) && !isStart(link, root) && isValidExtension(link) {
+	if isInternLink(link) && !isStart(link) && isValidExtension(link) {
 		return true
 	}
 
@@ -116,7 +125,7 @@ func isLinkScanned(link string, scanned []string) (exists bool) {
 	return
 }
 
-func getLinks(domain string, root string) (page Page, err error) {
+func getLinks(domain string) (page Page, err error) {
 
 	resp, err := http.Get(domain)
 	if err != nil {
@@ -163,7 +172,7 @@ func getLinks(domain string, root string) (page Page, err error) {
 					link, err := resp.Request.URL.Parse(a.Val)
 					if err == nil {
 						foundLink := SanitizeUrl(link.String())
-						if isValidLink(foundLink, root) {
+						if isValidLink(foundLink) {
 							ok = true
 							newLink.Href = foundLink
 						}
@@ -193,7 +202,7 @@ func getLinks(domain string, root string) (page Page, err error) {
 	return
 }
 
-func takeLinks(toScan string, root string, started chan int, finished chan int, scanning chan int, newLinks chan []Links, pages chan Page) {
+func takeLinks(toScan string, started chan int, finished chan int, scanning chan int, newLinks chan []Links, pages chan Page) {
 
 	started <- 1
 	scanning <- 1
@@ -204,7 +213,7 @@ func takeLinks(toScan string, root string, started chan int, finished chan int, 
 	}()
 
 	// Get links
-	page, err := getLinks(toScan, root)
+	page, err := getLinks(toScan)
 	if err != nil {
 		return
 	}

@@ -21,20 +21,27 @@ import (
 	"time"
 )
 
+var domain, root string
+var filename *string
+var simultaneus *int
+var useQueries *bool
+
 func main() {
 
-	var domain = flag.String("d", "", "Domain to analyse")
-	var filename = flag.String("o", "sitemap.xml", "Output filename")
-	var simultaneus = flag.Int("s", 3, "Number of concurrent connections")
-	flag.Parse()
-
-	if *domain == "" {
+	if len(os.Args) == 1 {
 		fmt.Println("URL can not be empty")
 		os.Exit(1)
 	}
+	domain = os.Args[1]
 
-	fmt.Println("Domain:", *domain)
+	filename = flag.String("o", "sitemap.xml", "Output filename")
+	simultaneus = flag.Int("s", 3, "Number of concurrent connections")
+	useQueries = flag.Bool("q", false, "Ignore queries on URLs")
+	flag.Parse()
+
+	fmt.Println("Domain:", domain)
 	fmt.Println("Simultaneus:", *simultaneus)
+	fmt.Println("Use Queries:", *useQueries)
 
 	if *simultaneus < 1 {
 		fmt.Println("There can't be less than 1 simulataneous conexions")
@@ -66,7 +73,7 @@ func main() {
 	}()
 
 	// Do First call to domain
-	resp, err := http.Get(*domain)
+	resp, err := http.Get(domain)
 	if err != nil {
 		fmt.Println("Domain could not be reached!")
 		return
@@ -75,11 +82,11 @@ func main() {
 	defer resp.Body.Close()
 
 	// Detected root domain
-	root := resp.Request.URL.String()
+	root = resp.Request.URL.String()
 
 	// Take the links from the startsite
-	takeLinks(*domain, root, started, finished, scanning, newLinks, pages)
-	seen[*domain] = true
+	takeLinks(domain, started, finished, scanning, newLinks, pages)
+	seen[domain] = true
 
 	for {
 		select {
@@ -89,7 +96,7 @@ func main() {
 				if !link.NoFollow {
 					if !seen[link.Href] {
 						seen[link.Href] = true
-						go takeLinks(link.Href, root, started, finished, scanning, newLinks, pages)
+						go takeLinks(link.Href, started, finished, scanning, newLinks, pages)
 					}
 				}
 			}

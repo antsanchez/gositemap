@@ -14,14 +14,14 @@ Just download the repository and compile it with `go build`.
 
 The following flags are available:
 
-- -d    Full Domain with HTTP Protocol
 - -o    Filename to output the sitemap
 - -s    Number of maximum concurrent connections
+- -q    If used, queries on URLs are not ignored
 
 Example:
 
 ```
-./gositemap -d https://example.com -o sitemap.xml -s 50
+./gositemap https://example.com -o sitemap.xml -s 50
 ```
 
 ## License
