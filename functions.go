@@ -34,12 +34,7 @@ func SanitizeUrl(link string) string {
 }
 
 func isInternLink(link string) bool {
-
-	if strings.Index(link, root) == 0 {
-		return true
-	}
-
-	return false
+	return strings.Index(link, root) == 0
 }
 
 func removeQuery(link string) string {
@@ -47,12 +42,7 @@ func removeQuery(link string) string {
 }
 
 func isStart(link string) bool {
-
-	if strings.Compare(link, root) == 0 {
-		return true
-	}
-
-	return false
+	return strings.Compare(link, root) == 0
 }
 
 func isValidExtension(link string) bool {
@@ -84,17 +74,6 @@ func doesLinkExist(newLink Links, existingLinks []Links) (exists bool) {
 	return
 }
 
-func isInSlice(search string, array []string) bool {
-
-	for _, val := range array {
-		if val == search {
-			return true
-		}
-	}
-
-	return false
-}
-
 func isUrlInSlice(search string, array []string) bool {
 
 	withSlash := search[:len(search)-1]
@@ -112,17 +91,6 @@ func isUrlInSlice(search string, array []string) bool {
 	}
 
 	return false
-}
-
-func isLinkScanned(link string, scanned []string) (exists bool) {
-
-	for _, val := range scanned {
-		if strings.Compare(link, val) == 0 {
-			exists = true
-		}
-	}
-
-	return
 }
 
 func getLinks(domain string) (page Page, err error) {
@@ -228,29 +196,24 @@ func takeLinks(toScan string, started chan int, finished chan int, scanning chan
 func createSitemap(links []string, filename string) {
 
 	var total = []byte(xml.Header)
-	total = appendBytes(total, []byte(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`))
-	total = appendBytes(total, []byte("\n"))
+	total = append(
+		total,
+		[]byte(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`)...,
+	)
+	total = append(total, []byte("\n")...)
 
 	for _, val := range links {
 		pos := UrlSitemap{Loc: val}
 		output, err := xml.MarshalIndent(pos, "  ", "    ")
 		check(err)
-		total = appendBytes(total, output)
-		total = appendBytes(total, []byte("\n"))
+		total = append(total, output...)
+		total = append(total, []byte("\n")...)
 	}
 
-	total = appendBytes(total, []byte(`</urlset>`))
+	total = append(total, []byte(`</urlset>`)...)
 
 	err := ioutil.WriteFile(filename, total, 0644)
 	check(err)
-}
-
-func appendBytes(appendTo []byte, toAppend []byte) []byte {
-	for _, val := range toAppend {
-		appendTo = append(appendTo, val)
-	}
-
-	return appendTo
 }
 
 func check(e error) {
