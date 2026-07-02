@@ -1,5 +1,5 @@
 module github.com/antsanchez/gositemap
 
-go 1.17
+go 1.25.0
 
-require golang.org/x/net v0.23.0
+require golang.org/x/net v0.55.0
